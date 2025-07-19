@@ -275,4 +275,69 @@ def main():
     axes[1, 0].set_title('Daily Returns')
     axes[1, 0].set_ylabel('Returns')
     
+    axes[1, 1].plot(data.index, data['RSI'])
+    axes[1, 1].axhline(y=70, color='r', linestyle='--', alpha=0.7)
+    axes[1, 1].axhline(y=30, color='g', linestyle='--', alpha=0.7)
+    axes[1, 1].set_title('RSI')
+    axes[1, 1].set_ylabel('RSI')
     
+    plt.tight_layout()
+    plt.show()
+    
+    #Making the model
+    print("\nCreating model...")
+    
+    #Feature selections
+    features = [
+        'Vol_lag1_1, Vol_lag_2, Vol_lag_3, Vol_lag_4, Vol_lag_5, Return_lag_1, Return_lag_2, Return_lag_3, Return_lag_4, Return_lag_5, Vol_MA_5, Vol_MA_10, HL_Spread, Volume_Ratio, RSI'
+    ]
+    
+    target = 'Future_Vol'
+    
+    #Model and train initialization
+    model = VolatilityLSTM(input_size=len(features), hidden_size=64, num_layers=2, dropout=0.3)
+    trainer = ModelTrainer(model)
+    
+    #Data preparing
+    X, y = trainer.prepare_data(data, features, target, sequence_length=20)
+    
+    #Train-test split
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=0.2, random_state=42)
+    
+    print(f"Training set: {X_train.shape}")
+    print(f"Validation set: {X_val.shape}")
+    print(f"Test set: {X_test.shape}")
+    
+    #Training model
+    print("\nTraining model...")
+    trainer.train(X_train, y_train, X_val, y_val, epochs=50, batch_size=32, lr=0.001)
+    
+    #Results
+    print("\nResults...")
+    trainer.plot_training_history()
+    
+    #Review test set
+    predictions, actual, metrics = trainer.evaulate(X_test, y_test)
+    
+    #Predictions plot
+    plt.figure(figsize=(12, 6))
+    plt.plot(actual, label='Actual Volatility', alpha=0.7)
+    plt.plot(predictions, label='Predicted Volatility', alpha=0.7)
+    plt.title('Volatility Prediction vs Reality')
+    plt.xlabel('Date')
+    plt.ylabel('Volatility')
+    plt.legend()
+    plt.show()
+    
+    #Scatter plot
+    plt.figure(figsize=(8, 6))
+    plt.scatter(actual, predictions, alpha=0.6)
+    plt.plot([actual.min(), actual.max()], [actual.min(), actual.max()], 'r--', lw=2)
+    plt.xlabel('Actual Volatility')
+    plt.ylabel('Predicted Volatility')
+    plt.title('Predicted vs Actual Volatility')
+    plt.show
+    
+    if  __name__ == "__main__":
+        main()
